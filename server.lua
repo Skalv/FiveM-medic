@@ -21,6 +21,7 @@ AddEventHandler("medics:inJob", function(inJob)
     {['@identifier'] = player, ['@inJob'] = inJob})
   end)
 end)
+
 -- When player call ambulance
 RegisterServerEvent("medics:callAmb")
 AddEventHandler('medics:callAmb', function(LastPosX , LastPosY , LastPosZ , accidentTime, playerSID)
@@ -33,6 +34,7 @@ AddEventHandler('medics:callAmb', function(LastPosX , LastPosY , LastPosZ , acci
     TriggerClientEvent('medics:emergencyCall', -1, playerSID, player)
   end)
 end)
+
 -- When medic take a call
 RegisterServerEvent("medics:takeCall")
 AddEventHandler("medics:takeCall", function(victimId)
@@ -50,6 +52,8 @@ AddEventHandler("medics:takeCall", function(victimId)
         local missionID = v.id
         MySQL:executeQuery("UPDATE medic SET victimState = 'rescued', medicId = '@medicId', medicServerId = '@medicServerId' WHERE id = '@id'",
         {["@id"] = missionID, ["@medicId"] = medicId, ["@medicServerId"] = medicSId})
+        MySQL:executeQuery("UPDATE users SET inIntervention = 1 WHERE identifier = '@identifier'",
+        {["@identifier"] = medicId})
         victimPos = json.decode(v.victimPos)
         victimSId = v.victimServerId
       end
@@ -57,17 +61,29 @@ AddEventHandler("medics:takeCall", function(victimId)
     end
   end)
 end)
+
 -- When a medic rez a player
 RegisterServerEvent("medics:resPlayer")
 AddEventHandler("medics:resPlayer", function(victimSId)
   TriggerEvent("es:getPlayerFromId", source, function(medic)
-    print(victimSId)
     local player = medic.identifier
     MySQL:executeQuery("UPDATE medic SET victimState = 'saved' WHERE medicId = '@medicId' AND victimState = 'rescued'",
     {["@medicId"] = player})
+    MySQL:executeQuery("UPDATE users SET inIntervention = 0 WHERE identifier = '@identifier'",
+    {["@identifier"] = player})
     TriggerClientEvent("medics:resYou", victimSId)
   end)
 end)
+
+-- When a call expire
+RegisterServerEvent("medics:callExpires")
+AddEventHandler("medics:callExpires", function(victimId, victimSId)
+  MySQL:executeQuery("UPDATE medic SET victimState = 'expire' WHERE victimId = '@victimId' AND victimState = 'waiting'",
+  {["@victimId"] = victimId})
+
+  TriggerClientEvent("medics:expire", victimSId)
+end)
+
 -- Return if medic are connected
 RegisterServerEvent("medics:getMedicConnected")
 AddEventHandler('medics:getMedicConnected', function()
@@ -79,7 +95,7 @@ AddEventHandler('medics:getMedicConnected', function()
     for i,v in pairs(players) do
       identifier = GetPlayerIdentifiers(i)
       if (identifier ~= nil) then
-        local query = MySQL:executeQuery("SELECT identifier, job_id, job_name FROM users LEFT JOIN jobs ON jobs.job_id = users.job WHERE users.identifier = '@identifier' AND job_name = 'Ambulancier' AND users.inJob = 1",
+        local query = MySQL:executeQuery("SELECT identifier, job_id, job_name FROM users LEFT JOIN jobs ON jobs.job_id = users.job WHERE users.identifier = '@identifier' AND job_name = 'Ambulancier' AND users.inJob = 1 AND users.inIntervention = 0",
         {['@identifier'] = identifier[1]})
         local result = MySQL:getResults(query, {'job_id'}, "identifier")
 

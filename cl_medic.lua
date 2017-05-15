@@ -4,6 +4,8 @@ local isMedic = nil
 local inIntervention = false
 local inJob = false
 
+local callTaken = false
+
 local medicGarage = {
   {x=-491.044, y=-342.608, z=34.366}
 }
@@ -49,29 +51,6 @@ function isNearVictim()
     end
 end
 
-function initWay(x, y, z)
-	SetNewWaypoint(x, y)
-end
-
-function initMedicsMission()
-  if not isDev then
-    Menu.hidden = not Menu.hidden
-  end
-  TriggerServerEvent('medics:newIntervention')
-end
-
-function refuseMedicsMission()
-  drawNotification("~r~Mission refusée")
-  Menu.hidden = not Menu.hidden
-end
-
-function emergencyCallMenu()
-  ClearMenu()
-  Menu.addTitle("Nouvelle victime !")
-  Menu.addButton("Y aller","initMedicsMission",nil)
-	Menu.addButton("Osef","refuseMedicsMission",nil)
-end
-
 function spawnAmbulance()
   local car = GetHashKey("ambulance");
   RequestModel(car)
@@ -83,6 +62,22 @@ function spawnAmbulance()
   SetEntityInvincible(veh, false)
 end
 
+function initNewIntervention(victimPosX, victimPosY, victimPosZ, victimSid)
+  DisplayNotification("Le lieu de l'accident à été transféré à votre GPS")
+  local blip1 = AddBlipForCoord(tonumber(victimPosX), tonumber(victimPosY), tonumber(victimPosZ))
+  printConsole(blip1)
+  SetBlipSprite(blip1, 61)
+  SetBlipRoute(blip1, true)
+  inIntervention = true
+  victimPos = {
+    x=victimPosX,
+    y=victimPosY,
+    z=victimPosZ,
+    sid=victimSid,
+    blip=blip1
+  }
+end
+
 -- Check if player is medic
 AddEventHandler('playerSpawned', function(spawn)
   TriggerServerEvent("medics:isMedic")
@@ -90,7 +85,6 @@ AddEventHandler('playerSpawned', function(spawn)
 	Citizen.CreateThread(function()
 		while isMedic == nil do
 			Citizen.Wait(1)
-
 			RegisterNetEvent('medics:setPlayerMedic')
 			AddEventHandler('medics:setPlayerMedic', function(medic)
         isMedic = medic
@@ -103,59 +97,44 @@ end)
 RegisterNetEvent('medics:emergencyCall')
 AddEventHandler('medics:emergencyCall', function(victimSId, victimId)
   local playerSId = GetPlayerServerId(PlayerId())
+  local callAt = GetGameTimer()
   local itsMeTheVictim = false
-  if (playerSId == victimSID) then itsMeTheVictim = true end
+  if (playerSId == victimSId) then itsMeTheVictim = true end
 
-  if isMedic and inJob and not itsMeTheVictim and not inIntervention then
-    local callTaken = false
-
+  -- if isMedic and inJob and not itsMeTheVictim then
+  if isMedic and inJob and not inIntervention then
     DisplayNotification("Nouvelle victime ! Appuyer sur ~g~Y~w~ pour la prendre en charge")
     -- Wait medics take call
     Citizen.CreateThread(function()
+      callTaken = false
+      local playerSId = GetPlayerServerId(PlayerId())
+
       while not callTaken do
-        Citizen.Wait(0)
+        Citizen.Wait(1)
+        if GetTimeDifference(GetGameTimer(), callAt) > 15000 then
+          callTaken = true -- call Expires
+          DisplayNotification("Vous n'avez pas répondu à l'intervention")
+          TriggerServerEvent("medics:callExpires", victimId, victimSId)
+        end
         -- I take the call
         if IsControlJustPressed(1,Keys["Y"]) then
-          TriggerServerEvent("medics:takeCall", victimId, playerSId)
-        end
-        -- When call is taken by me or other
-        RegisterNetEvent("medics:callTaken")
-        AddEventHandler("medics:callTaken", function(victimPosX, victimPosY, victimPosZ, victimSid, medicSId)
           callTaken = true
-          if (playerSId == medicSId) then
-            DisplayNotification("Le lieu de l'accident à été transféré à votre GPS")
-            local blip1 = AddBlipForCoord(tonumber(victimPosX), tonumber(victimPosY), tonumber(victimPosZ))
-            SetBlipSprite(blip1, 61)
-            SetBlipRoute(blip1, true)
-            inIntervention = true
-            victimPos = {
-              x=victimPosX,
-              y=victimPosY,
-              z=victimPosZ,
-              sid=victimSid,
-              blip=blip1
-            }
-          else
-            DisplayNotification("Victime prise en charge par un autre ambulancier")
-          end
-        end)
+          TriggerServerEvent("medics:takeCall", victimId)
+        end
       end
     end)
   end
-
-    -- if IsPedSittingInAnyVehicle(GetPlayerPed(-1)) and IsVehicleModel(GetVehiclePedIsUsing(GetPlayerPed(-1)), GetHashKey("ambulance", _r)) then
-    --   emergencyCallMenu()
-    --   Menu.hidden = not Menu.hidden
-    -- else
-    --   PrintChatMessage("vous devez être dans une ambulance !")
-    -- end
 end)
 
--- render emergencyCallMenu
-Citizen.CreateThread(function()
-  while true do
-    Citizen.Wait(0)
-    Menu.renderGUI()
+-- When call is taken by me or other
+RegisterNetEvent("medics:callTaken")
+AddEventHandler("medics:callTaken", function(victimPosX, victimPosY, victimPosZ, victimSid, medicSId)
+  local playerSId = GetPlayerServerId(PlayerId())
+  callTaken = true
+  if (playerSId == medicSId) then
+    initNewIntervention(victimPosX, victimPosY, victimPosZ, victimSid)
+  else
+    DisplayNotification("Victime prise en charge par un autre ambulancier")
   end
 end)
 
@@ -164,7 +143,7 @@ Citizen.CreateThread(function()
   while true do
     Citizen.Wait(0)
     -- Job takker
-    if (isMedic and isNearTakeService()) then
+    if isMedic and isNearTakeService() then
 			if(inJob) then
 				drawTxt("Appuyer sur ~g~E~s~ pour terminer votre service.",0,1,0.5,0.8,0.6,255,255,255,255)
 			else
@@ -191,7 +170,7 @@ Citizen.CreateThread(function()
 			end
     end
     -- Spawn Ambulance
-    if (inJob and isMedic and isNearMedicGarage()) then
+    if inJob and isMedic and isNearMedicGarage() then
       if(existingVeh ~= nil) then
         drawTxt("Appyyez sur ~g~E~s~ pour rentrer l'ambulance.",0,1,0.5,0.8,0.6,255,255,255,255)
       else
@@ -220,39 +199,35 @@ Citizen.CreateThread(function()
         end
       end
     end
-
-    if (inIntervention and isNearVictim()) then
+    -- Rez player when is near
+    local inVehicle = IsPedSittingInAnyVehicle(GetPlayerPed(-1))
+    if inIntervention and isNearVictim() and not inVehicle then
       drawTxt("Appuyer sur ~g~E~s~ pour soigner la victime.",0,1,0.5,0.8,0.6,255,255,255,255)
       if (IsControlJustReleased(1, Keys['E'])) then
-        PrintChatMessage("res : " .. victimPos.sid)
         TaskStartScenarioInPlace(GetPlayerPed(-1), 'CODE_HUMAN_MEDIC_TEND_TO_DEAD', 0, true)
         Citizen.Wait(8000)
         ClearPedTasks(GetPlayerPed(-1));
         TriggerServerEvent('medics:resPlayer', victimPos.sid)
         DisplayNotification("Victime sauvée !")
+        RemoveBlip(victimPos.blip)
         victimPos = {}
         inIntervention = false
       end
     end
+
+    if IsControlJustPressed(1,Keys["F1"]) then
+      SetEntityHealth(GetPlayerPed(-1), 99)
+    end
+    if IsControlJustPressed(1,Keys["F3"]) then
+      isMedic = not isMedic
+      inJob = not inJob
+    end
+    if IsControlJustPressed(1,Keys["F7"]) then
+      printConsole("Salut")
+    end
   end
 end)
 
--- Control trigger, Only for dev
-Citizen.CreateThread(function()
-	while isDev do
-		Citizen.Wait(0)
-    if IsControlJustPressed(1,Keys["F1"]) then
-			SetEntityHealth(GetPlayerPed(-1), 99)
-		end
-    if IsControlJustPressed(1,Keys["F3"]) then
-      -- local pos = GetEntityCoords(GetPlayerPed(-1))
-      -- PrintChatMessage(pos.x .. " " .. pos.y .. " " .. pos.z)
-      isMedic = not isMedic
-      if isMedic then
-        DisplayNotification("Vous êtes Ambulancier")
-      else
-        DisplayNotification("Vous n'êtes plus Ambulancier")
-      end
-    end
-	end
-end)
+-- Memo
+-- IsPedSittingInAnyVehicle(GetPlayerPed(-1))
+-- IsVehicleModel(GetVehiclePedIsUsing(GetPlayerPed(-1)), GetHashKey("ambulance", _r))

@@ -64,3 +64,54 @@ function drawTxt(text,font,centre,x,y,scale,r,g,b,a)
 	AddTextComponentString(text)
 	DrawText(x , y)
 end
+
+List = {}
+function List.new()
+  return {first = 0, last = -1}
+end
+function List.pushleft(list, value)
+  local first = list.first - 1
+  list.first = first
+  list[first] = value
+end
+function List.pushright(list, value)
+  local last = list.last + 1
+  list.last = last
+  list[last] = value
+end
+function List.popleft(list)
+  local first = list.first
+  if first > list.last then
+    local value = nil
+  else
+    local value = list[first]
+  end
+  list[first] = nil        -- to allow garbage collection
+  list.first = first + 1
+  return value
+end
+
+function List.getfirst(list)
+  return list[list.first]
+end
+
+function List.popright(list)
+  local last = list.last
+  if list.first > last then
+    local value = nil
+  else
+    local value = list[last]
+  end
+  list[last] = nil         -- to allow garbage collection
+  list.last = last - 1
+  return value
+end
+function List.getlast(list)
+  local last = list.last
+  if list.first > last then
+    local value = nil
+  else
+    local value = list[last]
+  end
+  return value
+end

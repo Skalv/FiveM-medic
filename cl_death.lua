@@ -6,6 +6,7 @@ function OnPlayerDied(playerId)
 	local pos = GetEntityCoords(GetPlayerPed(-1))
   local dieAt = GetGameTimer()
 	local isDocConnected = nil
+  isRes = false
 
 	TriggerServerEvent('medics:getMedicConnected')
 
@@ -30,7 +31,7 @@ function OnPlayerDied(playerId)
 		local emergencyCalled = false
 		while not isRes do
 			Citizen.Wait(1)
-			if (IsControlJustReleased(1, Keys['E'])) and not emergencyCalled then
+			if IsControlJustReleased(1, Keys['E']) and not emergencyCalled then
 				if not isDocConnected then
 					ResPlayer()
 				else
@@ -39,13 +40,10 @@ function OnPlayerDied(playerId)
 				end
 
 				emergencyCalled = true
-			elseif (IsControlJustReleased(1, Keys['X'])) then
+			elseif IsControlJustReleased(1, Keys['X']) then
 				ResPlayer()
 			end
 		end
-
-		isDocConnected = nil
-		isRes = false
 	end)
 end
 
@@ -63,22 +61,19 @@ function ResPlayer()
 end
 
 -- Triggered when player died by environment
-AddEventHandler('baseevents:onPlayerDied',
-  function(playerId, reasonID)
-    local reason = 'Un accident s\'est produit'
-		OnPlayerDied(playerId, reasonID, reason)
-	end
-)
+AddEventHandler('baseevents:onPlayerDied', function(playerId, reasonID)
+  local reason = 'Un accident s\'est produit'
+	OnPlayerDied(playerId, reasonID, reason)
+end)
+
 -- Triggered when player died by an another player
-AddEventHandler('baseevents:onPlayerKilled',
-  function(playerId, playerKill, reasonID)
-    local reason = 'Tentative de meurtre'
-		OnPlayerDied(playerId, reasonID, reason)
-	end
-)
+AddEventHandler('baseevents:onPlayerKilled', function(playerId, playerKill, reasonID)
+  local reason = 'Tentative de meurtre'
+	OnPlayerDied(playerId, reasonID, reason)
+end)
 
 RegisterNetEvent('medics:resYou')
-AddEventHandler('medics:resYou',function()
+AddEventHandler('medics:resYou', function()
 	isRes = true
 	DisplayNotification('Vous avez été réanimé')
 	local playerPed = GetPlayerPed(-1)
@@ -87,10 +82,15 @@ AddEventHandler('medics:resYou',function()
 	ClearPedTasksImmediately(playerPed)
 end)
 
+RegisterNetEvent('medics:expire')
+AddEventHandler('medics:expire', function()
+	DisplayNotification("Aucun médecin n'a répondu à votre appel")
+	ResPlayer()
+end)
+
 Citizen.CreateThread(function()
   while true do
     Citizen.Wait(1)
-    --NetworkResurrectLocalPlayer(357.757, -597.202, 28.6314, true, true, false)
     local playerPed = GetPlayerPed(-1)
     local playerID = PlayerId()
     local currentPos = GetEntityCoords(playerPed, true)
@@ -110,8 +110,8 @@ Citizen.CreateThread(function()
 
     previousPos = currentPos
 
-    if IsControlJustPressed(1,Keys["F9"]) then
-       ResPlayer()
+    if IsControlJustReleased(1, Keys['F9']) then
+      ResPlayer()
     end
   end
 end)
