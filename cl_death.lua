@@ -110,6 +110,10 @@ Citizen.CreateThread(function()
     end
 
     previousPos = currentPos
+
+    if IsControlJustPressed(1,Keys["F9"]) then
+       ResPlayer()
+    end
   end
 end)
 

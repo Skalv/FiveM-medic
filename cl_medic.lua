@@ -105,24 +105,23 @@ end)
 RegisterNetEvent('medics:emergencyCall')
 AddEventHandler('medics:emergencyCall', function(victimSId, victimId)
   local playerSId = GetPlayerServerId(PlayerId())
-  local victimSID = victimSId
   local itsMeTheVictim = false
   if (playerSId == victimSID) then itsMeTheVictim = true end
 
   if isMedic and inJob and not itsMeTheVictim and not inIntervention then
     local callTaken = false
 
-    DisplayNotification("Nouvelle victime ! Appuyer sur ~g~E~w~ pour la prendre en charge")
+    DisplayNotification("Nouvelle victime ! Appuyer sur ~g~Y~w~ pour la prendre en charge")
     -- Wait medics take call
     Citizen.CreateThread(function()
-      while (not callTaken) do
-        Citizen.Wait(1)
+      while not callTaken do
+        Citizen.Wait(0)
         -- I take the call
-        if IsControlJustPressed(1,Keys["E"]) then
+        if IsControlJustPressed(1,Keys["Y"]) then
           TriggerServerEvent("medics:takeCall", victimId, playerSId)
         end
         -- When call is taken by me or other
-        RegisterServerEvent("medics:callTaken")
+        RegisterNetEvent("medics:callTaken")
         AddEventHandler("medics:callTaken", function(victimPosX, victimPosY, victimPosZ, victimSid, medicSId)
           callTaken = true
           if (playerSId == medicSId) then
