@@ -1,18 +1,11 @@
 client_scripts {
-	"client.lua",
-  "GUI.lua",
+  "lib/GUI.lua",
+  "lib/cl_utils.lua",
+  "cl_death.lua",
+  "cl_medic.lua"
 }
 
 server_scripts {
+  "lib/sv_utils.lua",
   "server.lua",
 }
-
-ui_page('html/index.html')
-
-files({
-  'html/index.html',
-  'html/script.js',
-  'html/style.css',
-  'html/bootstrap.css',
-  'html/cursor.png'
-})
