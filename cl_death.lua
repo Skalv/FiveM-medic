@@ -34,6 +34,7 @@ function OnPlayerDied(playerId)
 				if not isDocConnected then
 					ResPlayer()
 				else
+          DisplayNotification("Ambulance appelée !")
 					TriggerServerEvent('medics:callAmb', pos.x, pos.y, pos.z, dieAt, GetPlayerServerId(PlayerId()))
 				end
 
@@ -76,17 +77,15 @@ AddEventHandler('baseevents:onPlayerKilled',
 	end
 )
 
-RegisterNetEvent('medic:res')
-AddEventHandler('medic:res',
-	function()
-		isRes = true
-		SendNotification('Vous avez été réanimé')
-		local playerPed = GetPlayerPed(-1)
-		ResurrectPed(playerPed)
-		SetEntityHealth(playerPed, GetPedMaxHealth(playerPed)/2)
-		ClearPedTasksImmediately(playerPed)
-	end
-)
+RegisterNetEvent('medic:resYou')
+AddEventHandler('medic:resYou',function()
+	isRes = true
+	SendNotification('Vous avez été réanimé')
+	local playerPed = GetPlayerPed(-1)
+	ResurrectPed(playerPed)
+	SetEntityHealth(playerPed, GetPedMaxHealth(playerPed)/2)
+	ClearPedTasksImmediately(playerPed)
+end)
 
 Citizen.CreateThread(function()
   while true do

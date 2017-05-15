@@ -41,14 +41,12 @@ function isNearTakeService()
 end
 
 function isNearVictim()
-  for i = 1, #victimPos do
     local ply = GetPlayerPed(-1)
     local plyCoords = GetEntityCoords(ply, 0)
-    local distance = GetDistanceBetweenCoords(victimPos[i].x, victimPos[i].y, victimPos[i].z, plyCoords["x"], plyCoords["y"], plyCoords["z"], true)
+    local distance = GetDistanceBetweenCoords(victimPos.x, victimPos.y, victimPos.z, plyCoords["x"], plyCoords["y"], plyCoords["z"], true)
     if (distance < 3) then
       return true
     end
-  end
 end
 
 function initWay(x, y, z)
@@ -131,7 +129,11 @@ AddEventHandler('medics:emergencyCall', function(victimSId, victimId)
             SetBlipRoute(blip1, true)
             inIntervention = true
             victimPos = {
-              {x=victimPosX, y=victimPosY, z=victimPosZ}
+              x=victimPosX,
+              y=victimPosY,
+              z=victimPosZ,
+              sid=victimSid,
+              blip=blip1
             }
           else
             DisplayNotification("Victime prise en charge par un autre ambulancier")
@@ -221,6 +223,15 @@ Citizen.CreateThread(function()
 
     if (inIntervention and isNearVictim()) then
       drawTxt("Appuyer sur ~g~E~s~ pour soigner la victime.",0,1,0.5,0.8,0.6,255,255,255,255)
+      if (IsControlJustReleased(1, Keys['E'])) then
+        TaskStartScenarioInPlace(GetPlayerPed(-1), 'CODE_HUMAN_MEDIC_TEND_TO_DEAD', 0, true)
+        Citizen.Wait(8000)
+        ClearPedTasks(GetPlayerPed(-1));
+        TriggerServerEvent('medics:resPlayer', victimPos.sid)
+        DisplayNotification("Victime sauvée !")
+        victimPos = {}
+        inIntervention = false
+      end
     end
   end
 end)

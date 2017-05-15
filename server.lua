@@ -39,8 +39,10 @@ AddEventHandler("medics:takeCall", function(victimId)
   TriggerEvent("es:getPlayerFromId", source, function(medic)
     local medicId = medic.identifier
     local medicSId = source
+    local victimPos = nil
+    local victimSId = nil
 
-    local query = MySQL:executeQuery("SELECT * FROM medic WHERE victimId = '@victimId'",
+    local query = MySQL:executeQuery("SELECT * FROM medic WHERE victimId = '@victimId' and victimState = 'waiting'",
     {['@victimId'] = victimId})
     local result = MySQL:getResults(query, {'id', 'victimPos', 'victimServerId', 'accidentTime'}, "id")
     if (result and result[1]) then
@@ -48,31 +50,23 @@ AddEventHandler("medics:takeCall", function(victimId)
         local missionID = v.id
         MySQL:executeQuery("UPDATE medic SET victimState = 'rescued', medicId = '@medicId', medicServerId = '@medicServerId' WHERE id = '@id'",
         {["@id"] = missionID, ["@medicId"] = medicId, ["@medicServerId"] = medicSId})
-        local victimPos = json.decode(v.victimPos)
-
-        TriggerClientEvent("medics:callTaken", source, victimPos[1], victimPos[2], victimPos[3], v.victimServerId, medicSId)
+        victimPos = json.decode(v.victimPos)
+        victimSId = v.victimServerId
       end
+      TriggerClientEvent("medics:callTaken", source, victimPos[1], victimPos[2], victimPos[3], victimSId, medicSId)
     end
   end)
 end)
-
-RegisterServerEvent("medics:newIntervention")
-AddEventHandler('medics:newIntervention', function()
-  TriggerEvent('es:getPlayerFromId', source, function(user)
-    local medicId = user.identifier
-    local query = MySQL:executeQuery("SELECT * FROM medic WHERE victimState = 'waiting' ORDER BY accidentTime LIMIT 1")
-    local result = MySQL:getResults(query, {'id', 'victimPos', 'victimServerId', 'accidentTime'}, "id")
-    if (result and result[1]) then
-      for k,v in ipairs(result) do
-        local missionID = v.id
-        MySQL:executeQuery("UPDATE medic SET victimState = 'rescued', medicId = '@medicId', medicServerId = '@medicServerId' WHERE id = '@id'", {["@id"] = missionID, ["@medicId"] = medicId, ["@medicServerId"] = source})
-        local victimPos = json.decode(v.victimPos)
-        TriggerClientEvent("medics:newEmergencyWay", source, victimPos[1], victimPos[2], victimPos[3], v.victimServerId)
-      end
-    end
+-- When a medic rez a player
+RegisterServerEvent("medics:resPlayer")
+AddEventHandler("medics:resPlayer", function(victimSId)
+  TriggerEvent("es:getPlayerFromId", source, function(medic)
+    local player = medic.identifier
+    MySQL:executeQuery("UPDATE medic SET victimState = 'saved' WHERE medicId = '@medicId' AND victimState = 'rescued'",
+    {["@medicId"] = player})
+    TriggerClientEvent("medics:resYou", victimSId)
   end)
 end)
-
 -- Return if medic are connected
 RegisterServerEvent("medics:getMedicConnected")
 AddEventHandler('medics:getMedicConnected', function()
