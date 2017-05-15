@@ -224,6 +224,7 @@ Citizen.CreateThread(function()
     if (inIntervention and isNearVictim()) then
       drawTxt("Appuyer sur ~g~E~s~ pour soigner la victime.",0,1,0.5,0.8,0.6,255,255,255,255)
       if (IsControlJustReleased(1, Keys['E'])) then
+        PrintChatMessage("res : " .. victimPos.sid)
         TaskStartScenarioInPlace(GetPlayerPed(-1), 'CODE_HUMAN_MEDIC_TEND_TO_DEAD', 0, true)
         Citizen.Wait(8000)
         ClearPedTasks(GetPlayerPed(-1));

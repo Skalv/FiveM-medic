@@ -61,6 +61,7 @@ end)
 RegisterServerEvent("medics:resPlayer")
 AddEventHandler("medics:resPlayer", function(victimSId)
   TriggerEvent("es:getPlayerFromId", source, function(medic)
+    print(victimSId)
     local player = medic.identifier
     MySQL:executeQuery("UPDATE medic SET victimState = 'saved' WHERE medicId = '@medicId' AND victimState = 'rescued'",
     {["@medicId"] = player})

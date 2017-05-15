@@ -77,10 +77,10 @@ AddEventHandler('baseevents:onPlayerKilled',
 	end
 )
 
-RegisterNetEvent('medic:resYou')
-AddEventHandler('medic:resYou',function()
+RegisterNetEvent('medics:resYou')
+AddEventHandler('medics:resYou',function()
 	isRes = true
-	SendNotification('Vous avez été réanimé')
+	DisplayNotification('Vous avez été réanimé')
 	local playerPed = GetPlayerPed(-1)
 	ResurrectPed(playerPed)
 	SetEntityHealth(playerPed, GetPedMaxHealth(playerPed)/2)
