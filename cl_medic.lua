@@ -101,8 +101,7 @@ AddEventHandler('medics:emergencyCall', function(victimSId, victimId)
   local itsMeTheVictim = false
   if (playerSId == victimSId) then itsMeTheVictim = true end
 
-  -- if isMedic and inJob and not itsMeTheVictim then
-  if isMedic and inJob and not inIntervention then
+  if isMedic and inJob and not inIntervention and not itsMeTheVictim then
     DisplayNotification("Nouvelle victime ! Appuyer sur ~g~Y~w~ pour la prendre en charge")
     -- Wait medics take call
     Citizen.CreateThread(function()
@@ -213,17 +212,6 @@ Citizen.CreateThread(function()
         victimPos = {}
         inIntervention = false
       end
-    end
-
-    if IsControlJustPressed(1,Keys["F1"]) then
-      SetEntityHealth(GetPlayerPed(-1), 99)
-    end
-    if IsControlJustPressed(1,Keys["F3"]) then
-      isMedic = not isMedic
-      inJob = not inJob
-    end
-    if IsControlJustPressed(1,Keys["F7"]) then
-      printConsole("Salut")
     end
   end
 end)
